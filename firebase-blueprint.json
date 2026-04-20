@@ -1,0 +1,67 @@
+{
+  "entities": {
+    "User": {
+      "title": "User Profile",
+      "description": "Information about a VenueFlow user",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "displayName": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "photoURL": { "type": "string", "format": "uri" },
+        "role": { "type": "string", "enum": ["attendee", "staff", "admin"] },
+        "highContrast": { "type": "boolean" }
+      },
+      "required": ["uid", "email", "role"]
+    },
+    "CrowdSnapshot": {
+      "title": "Crowd Density Snapshot",
+      "description": "A batch of crowd coordinates and density values",
+      "type": "object",
+      "properties": {
+        "points": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "latitude": { "type": "number" },
+              "longitude": { "type": "number" },
+              "density": { "type": "number" },
+              "gateId": { "type": "string" },
+              "timestamp": { "type": "integer" }
+            }
+          }
+        },
+        "timestamp": { "type": "object", "description": "Firestore server timestamp" },
+        "isSurge": { "type": "boolean" }
+      },
+      "required": ["points", "timestamp"]
+    },
+    "Prediction": {
+      "title": "Queue Prediction",
+      "description": "Wait time calculations for a specific gate",
+      "type": "object",
+      "properties": {
+        "gateId": { "type": "string" },
+        "waitTimeMinutes": { "type": "number" },
+        "trend": { "type": "string", "enum": ["rising", "stable", "falling"] },
+        "lastUpdated": { "type": "number" }
+      },
+      "required": ["gateId", "waitTimeMinutes", "trend", "lastUpdated"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profiles and preferences"
+    },
+    "/crowd_snapshots/{snapshotId}": {
+      "schema": "CrowdSnapshot",
+      "description": "Historical and real-time crowd data points"
+    },
+    "/predictions/{gateId}": {
+      "schema": "Prediction",
+      "description": "Real-time queue wait time predictions"
+    }
+  }
+}

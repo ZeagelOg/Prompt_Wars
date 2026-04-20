@@ -1,0 +1,101 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 0. Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Helpers ---
+    function isSignedIn() {
+      return request.auth != null && request.auth.token.email_verified == true;
+    }
+    
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+    
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+    
+    function incoming() {
+      return request.resource.data;
+    }
+    
+    function existing() {
+      return resource.data;
+    }
+
+    function getUserRole() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+    }
+
+    function isStaff() {
+      return isSignedIn() && getUserRole() in ['staff', 'admin'];
+    }
+
+    // --- Validation Blueprints ---
+    
+    function isValidUser(data) {
+      return data.keys().hasAll(['uid', 'email', 'role', 'highContrast', 'darkMode']) 
+        && data.keys().size() <= 8
+        && data.uid == request.auth.uid
+        && data.email is string && data.email.size() <= 256
+        && data.role in ['attendee', 'staff', 'admin']
+        && data.highContrast is bool
+        && data.darkMode is bool;
+    }
+
+    function isValidSnapshot(data) {
+      return data.keys().hasAll(['points', 'timestamp'])
+        && data.keys().size() <= 3
+        && data.points is list
+        && data.points.size() > 0 && data.points.size() <= 50
+        && data.timestamp == request.time;
+    }
+
+    function isValidPrediction(data) {
+      return data.keys().hasAll(['gateId', 'waitTimeMinutes', 'trend', 'lastUpdated'])
+        && data.keys().size() == 4
+        && data.gateId is string && data.gateId.size() <= 64
+        && data.waitTimeMinutes is number && data.waitTimeMinutes >= 0
+        && data.trend in ['rising', 'stable', 'falling']
+        && data.lastUpdated is number;
+    }
+
+    // --- Match Blocks ---
+
+    match /users/{userId} {
+      allow get: if isOwner(userId) || isStaff();
+      // Only list if admin (to prevent scraping)
+      allow list: if isStaff(); 
+      
+      allow create: if isOwner(userId) 
+        && (incoming().email == 'bhowmiklisha7@gmail.com' ? incoming().role == 'admin' : incoming().role == 'attendee')
+        && isValidUser(incoming());
+        
+      allow update: if isOwner(userId)
+        && (existing().email == 'bhowmiklisha7@gmail.com' ? (incoming().role == 'admin' || incoming().role == 'attendee') : incoming().role == existing().role)
+        && incoming().uid == existing().uid   // Immutable ID
+        && isValidUser(incoming())
+        && (
+          // Action: Update Profile
+          incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'photoURL', 'highContrast', 'darkMode', 'role'])
+        );
+    }
+
+    match /crowd_snapshots/{snapshotId} {
+      allow read: if isSignedIn();
+      allow create: if isStaff() && isValidSnapshot(incoming()) && isValidId(snapshotId);
+      // Snapshots are immutable
+      allow update, delete: if false;
+    }
+
+    match /predictions/{gateId} {
+      allow read: if isSignedIn();
+      allow write: if isStaff() && isValidPrediction(incoming()) && isValidId(gateId);
+    }
+  }
+}

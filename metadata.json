@@ -1,0 +1,8 @@
+{
+  "name": "VenueFlow",
+  "description": "PWA for improving physical event experiences at large-scale venues with indoor navigation, crowd heatmaps, and real-time wait-time prediction.",
+  "requestFramePermissions": [
+    "geolocation"
+  ],
+  "majorCapabilities": []
+}
