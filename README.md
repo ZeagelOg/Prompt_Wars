@@ -22,4 +22,4 @@ See [SETUP.md](./SETUP.md) for detailed local development instructions.
 Refer to [SECURITY.md](./SECURITY.md) for our secrets management policy and Firebase Security Rules architecture.
 
 ## 🔗 Live Demo
-[View Live Site](https://ais-pre-ajltce4czcsyzlnelvilvq-290881080113.asia-east1.run.app)
+[View Live Site](PASTE THE URL LINK)
